@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# cdnway
+#
+# chkconfig: 2345 80 30
+# description: Cdnway Nginx Agent
+# processname: cdnway
+
+# Source function library.
+. /etc/init.d/functions
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+EXEC=cdnway
+DAEMON=/bin/$EXEC
+OPTIONS="-path=/etc/cdnway.conf"
+LOGFILE=/var/log/cdnway.log
+
+prog='cdnway'
+
+start() {
+        # Check that networking is up.
+        [ "$NETWORKING" = "no" ] && exit 1
+		
+        echo -n $"Starting $prog: "
+        daemon --check $EXEC daemonize -o $LOGFILE -p /var/run/$EXEC.pid -l /var/lock/subsys/$EXEC -u root $DAEMON $OPTIONS
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && touch /var/lock/subsys/$EXEC
+        return $RETVAL
+}
+
+stop() {
+        echo -n $"Shutting down $prog: "
+        killproc $EXEC
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/$EXEC
+        return $RETVAL
+}
+
+# See how we were called.
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  status)        
+        ;;
+  restart|reload)
+        stop
+        start
+        RETVAL=$?
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart|status}"
+        RETVAL=3
+esac
+
+exit $RETVAL

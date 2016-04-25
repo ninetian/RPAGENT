@@ -1,0 +1,70 @@
+server {
+	listen 80;
+	listen [::]:80;
+	server_name ##DOMAIN## www.##DOMAIN## ##DOMAIN##.cdn.la;
+	#access_log /usr/local/cdnway/pipe/bandwidth.pipe bandwidth;
+	#access_log syslog:user:info:logs.cdnway.com:515 access;
+	access_log /usr/local/nginx/logs/##DOMAIN##_access.log access;
+        access_log /usr/local/nginx/logs/##DOMAIN##_bytes.log bytes;
+	
+	#  Purge Cache
+	location ~ /purge(/.*) {
+		allow all;
+		proxy_cache_purge cache_one $host$1$is_args$args;
+		error_page 405 =200 /purge$1;
+	}
+
+	## Cache For Total
+	location / {
+		proxy_cache cache_one;
+		proxy_cache_valid  200 304 30m; #Cache for 30Minutes
+		proxy_cache_key $host$uri$is_args$args;
+		proxy_redirect off;
+		proxy_pass http://##IP##:##PORT##;
+		proxy_set_header Host ##DOMAIN##;
+		proxy_set_header X-Real-IP $remote_addr;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_set_header Accept-Encoding "";
+		proxy_ignore_headers Cache-Control;
+		proxy_hide_header Cache-Control;
+		proxy_ignore_headers Expires;
+		proxy_hide_header Expires;
+		#proxy_hide_header Set-Cookie;
+		#proxy_ignore_headers Set-Cookie;
+		add_header Cache-Status "$upstream_cache_status";
+		expires 5m;
+	}
+
+	## Cache Images Static Files
+	location ~ .*\.(ico|jpg|jpeg|bmp|gif|png|swf|flv|mp3|wma)$ {
+		proxy_cache cache_one;
+		proxy_cache_valid 200 304 30m; #Cache for 30Minutes
+		proxy_cache_key $host$uri$is_args$args;
+		proxy_set_header Host ##DOMAIN##;
+		add_header Cache-Status "$upstream_cache_status";
+		expires 24h;
+		proxy_pass http://##IP##:##PORT##;
+	}
+
+	## Cache Common Static Files
+	location ~ .*\.(js|css)$ {
+		proxy_cache cache_one;
+		proxy_cache_valid 200 304 30m; #Cache for 30Minutes
+		proxy_cache_key $host$uri$is_args$args;
+		proxy_set_header Host ##DOMAIN##;
+		add_header Cache-Status "$upstream_cache_status";
+		expires 24h;
+		proxy_pass http://##IP##:##PORT##;
+	}
+	
+	## DYN Cache
+	location ~ .*\.(php|jsp|cgi|asp|aspx|xml|do|rar|zip|rmvb|mp4|mov|avi|wmv|doc|docx|xls|pdf|gz|tgz|rm|exe)?$ {
+		proxy_pass http://##IP##:##PORT##;
+		proxy_set_header Host	##DOMAIN##;
+		proxy_redirect off;
+		proxy_set_header X-Real-IP $remote_addr;
+		add_header Cache-Status "$upstream_cache_status";
+	}
+
+}
+
